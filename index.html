@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EPC QR Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0b;
+      --bg-secondary: #111113;
+      --bg-elevated: #18181b;
+      --border: #27272a;
+      --border-focus: #3f3f46;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1aa;
+      --text-muted: #52525b;
+      --accent: #22d3ee;
+      --accent-dim: rgba(34, 211, 238, 0.1);
+      --accent-glow: rgba(34, 211, 238, 0.15);
+      --error: #f87171;
+      --success: #4ade80;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, var(--accent-glow), transparent),
+        radial-gradient(circle at 20% 80%, rgba(34, 211, 238, 0.03), transparent 40%);
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    h1 span {
+      color: var(--accent);
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      font-weight: 300;
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      animation: slideUp 0.5s ease-out 0.1s both;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.875rem 1rem;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 400;
+      transition: all 0.2s ease;
+    }
+
+    input::placeholder {
+      color: var(--text-muted);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    input:hover:not(:focus) {
+      border-color: var(--border-focus);
+    }
+
+    .input-hint {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+    }
+
+    .currency-input {
+      position: relative;
+    }
+
+    .currency-input::before {
+      content: '€';
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      pointer-events: none;
+    }
+
+    .currency-input input {
+      padding-left: 2rem;
+    }
+
+    button {
+      width: 100%;
+      padding: 1rem;
+      margin-top: 0.5rem;
+      background: linear-gradient(135deg, var(--accent) 0%, #06b6d4 100%);
+      border: none;
+      border-radius: 10px;
+      color: var(--bg-primary);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 100%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+
+    button:hover::before {
+      opacity: 1;
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .qr-output {
+      margin-top: 2rem;
+      animation: slideUp 0.5s ease-out 0.2s both;
+    }
+
+    .qr-container {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .qr-placeholder {
+      padding: 3rem 1.5rem;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .qr-placeholder svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 1rem;
+      opacity: 0.3;
+    }
+
+    #qrcode {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 200px;
+    }
+
+    #qrcode canvas,
+    #qrcode img {
+      border-radius: 8px;
+      animation: scaleIn 0.3s ease-out;
+    }
+
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .qr-actions {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .qr-actions button {
+      flex: 1;
+      padding: 0.75rem;
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      font-weight: 500;
+      border: 1px solid var(--border);
+    }
+
+    .qr-actions button:hover {
+      background: var(--bg-primary);
+      border-color: var(--border-focus);
+      box-shadow: none;
+    }
+
+    .error-message {
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-top: 1rem;
+      color: var(--error);
+      font-size: 0.85rem;
+      display: none;
+    }
+
+    .error-message.visible {
+      display: block;
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      animation: fadeIn 0.6s ease-out 0.3s both;
+    }
+
+    footer a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    footer a:hover {
+      color: var(--accent);
+    }
+
+    @media (max-width: 500px) {
+      .container {
+        padding: 2rem 1rem;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+      }
+
+      .card {
+        padding: 1.25rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>EPC <span>QR</span> Generator</h1>
+      <p class="subtitle">SEPA Credit Transfer QR Codes</p>
+    </header>
+
+    <div class="card">
+      <form id="epcForm">
+        <div class="form-group">
+          <label for="name">Beneficiary Name</label>
+          <input type="text" id="name" placeholder="Max Mustermann" maxlength="70" required>
+        </div>
+
+        <div class="form-group">
+          <label for="iban">IBAN</label>
+          <input type="text" id="iban" placeholder="DE89 3704 0044 0532 0130 00" maxlength="34" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="bic">BIC (Optional)</label>
+            <input type="text" id="bic" placeholder="COBADEFFXXX" maxlength="11">
+            <p class="input-hint">Required for non-EEA</p>
+          </div>
+
+          <div class="form-group">
+            <label for="amount">Amount</label>
+            <div class="currency-input">
+              <input type="number" id="amount" placeholder="0.00" step="0.01" min="0.01" max="999999999.99">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reference">Reference</label>
+          <input type="text" id="reference" placeholder="Invoice 2024-001" maxlength="140">
+          <p class="input-hint">Payment reference or remittance info</p>
+        </div>
+
+        <button type="submit">Generate QR Code</button>
+
+        <div class="error-message" id="errorMessage"></div>
+      </form>
+    </div>
+
+    <div class="qr-output">
+      <div class="qr-container">
+        <div id="qrcode">
+          <div class="qr-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="3" height="3"/>
+              <rect x="18" y="14" width="3" height="3"/>
+              <rect x="14" y="18" width="3" height="3"/>
+              <rect x="18" y="18" width="3" height="3"/>
+            </svg>
+            <p>Fill in the form to generate<br>your EPC QR code</p>
+          </div>
+        </div>
+        <div class="qr-actions" id="qrActions" style="display: none;">
+          <button type="button" id="downloadBtn">Download PNG</button>
+          <button type="button" id="copyBtn">Copy Data</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>EPC QR codes follow the <a href="https://www.europeanpaymentscouncil.eu/document-library/guidance-documents/quick-response-code-guidelines-enable-data-capture-initiation" target="_blank">EPC069-12 standard</a></p>
+    </footer>
+  </div>
+
+  <script>
+    const form = document.getElementById('epcForm');
+    const qrcodeContainer = document.getElementById('qrcode');
+    const qrActions = document.getElementById('qrActions');
+    const errorMessage = document.getElementById('errorMessage');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const copyBtn = document.getElementById('copyBtn');
+
+    let currentEpcData = '';
+
+    // URL sync functions
+    function updateURL() {
+      const params = new URLSearchParams();
+      const name = document.getElementById('name').value.trim();
+      const iban = document.getElementById('iban').value.replace(/\s/g, '');
+      const bic = document.getElementById('bic').value.trim();
+      const amount = document.getElementById('amount').value;
+      const reference = document.getElementById('reference').value.trim();
+
+      if (name) params.set('name', name);
+      if (iban) params.set('iban', iban);
+      if (bic) params.set('bic', bic);
+      if (amount) params.set('amount', amount);
+      if (reference) params.set('ref', reference);
+
+      const newURL = params.toString() 
+        ? `${window.location.pathname}?${params.toString()}`
+        : window.location.pathname;
+      
+      window.history.replaceState({}, '', newURL);
+    }
+
+    function loadFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      
+      const name = params.get('name');
+      const iban = params.get('iban');
+      const bic = params.get('bic');
+      const amount = params.get('amount');
+      const reference = params.get('ref');
+
+      if (name) document.getElementById('name').value = name;
+      if (iban) {
+        // Format IBAN with spaces
+        const formatted = iban.toUpperCase().match(/.{1,4}/g)?.join(' ') ?? iban;
+        document.getElementById('iban').value = formatted;
+      }
+      if (bic) document.getElementById('bic').value = bic.toUpperCase();
+      if (amount) document.getElementById('amount').value = amount;
+      if (reference) document.getElementById('reference').value = reference;
+
+      // Auto-generate QR if we have required fields
+      if (name && iban) {
+        setTimeout(() => form.dispatchEvent(new Event('submit')), 100);
+      }
+    }
+
+    function formatIBAN(iban) {
+      return iban.replace(/\s/g, '').toUpperCase();
+    }
+
+    function validateIBAN(iban) {
+      const formatted = formatIBAN(iban);
+      return /^[A-Z]{2}[0-9]{2}[A-Z0-9]{4,30}$/.test(formatted);
+    }
+
+    function formatBIC(bic) {
+      return bic.replace(/\s/g, '').toUpperCase();
+    }
+
+    function formatAmount(amount) {
+      if (!amount) return '';
+      return 'EUR' + parseFloat(amount).toFixed(2);
+    }
+
+    function generateEPCData(data) {
+      const lines = [
+        'BCD',                           // Service Tag
+        '002',                           // Version
+        '1',                             // Character set (UTF-8)
+        'SCT',                           // Identification
+        data.bic ?? '',                  // BIC
+        data.name,                       // Beneficiary Name
+        data.iban,                       // IBAN
+        data.amount ?? '',               // Amount
+        '',                              // Purpose (optional)
+        data.reference ?? '',            // Remittance Reference
+        '',                              // Remittance Text (alternative to reference)
+        ''                               // Beneficiary to originator info
+      ];
+      
+      return lines.join('\n');
+    }
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.add('visible');
+      setTimeout(() => errorMessage.classList.remove('visible'), 4000);
+    }
+
+    function clearError() {
+      errorMessage.classList.remove('visible');
+    }
+
+    function generateQR(epcData) {
+      qrcodeContainer.innerHTML = '';
+      
+      try {
+        new QRCode(qrcodeContainer, {
+          text: epcData,
+          width: 200,
+          height: 200,
+          colorDark: '#fafafa',
+          colorLight: '#111113',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+        
+        qrActions.style.display = 'flex';
+        currentEpcData = epcData;
+      } catch (err) {
+        showError('Failed to generate QR code: ' + err.message);
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+
+      const name = document.getElementById('name').value.trim();
+      const iban = formatIBAN(document.getElementById('iban').value);
+      const bic = formatBIC(document.getElementById('bic').value);
+      const amount = document.getElementById('amount').value;
+      const reference = document.getElementById('reference').value.trim();
+
+      // Validation
+      if (!name) {
+        showError('Please enter a beneficiary name');
+        return;
+      }
+
+      if (!validateIBAN(iban)) {
+        showError('Please enter a valid IBAN');
+        return;
+      }
+
+      if (name.length > 70) {
+        showError('Beneficiary name must be 70 characters or less');
+        return;
+      }
+
+      const data = {
+        name,
+        iban,
+        bic: bic || null,
+        amount: amount ? formatAmount(amount) : null,
+        reference: reference || null
+      };
+
+      const epcData = generateEPCData(data);
+      
+      // Check total length (max 331 characters for EPC QR)
+      if (epcData.length > 331) {
+        showError('Data exceeds maximum EPC QR code length');
+        return;
+      }
+
+      generateQR(epcData);
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const canvas = qrcodeContainer.querySelector('canvas');
+      const img = qrcodeContainer.querySelector('img');
+      
+      if (canvas) {
+        const link = document.createElement('a');
+        link.download = 'epc-qr-code.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } else if (img) {
+        const link = document.createElement('a');
+        link.download = 'epc-qr-code.png';
+        link.href = img.src;
+        link.click();
+      }
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      if (!currentEpcData) return;
+      
+      try {
+        await navigator.clipboard.writeText(currentEpcData);
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => copyBtn.textContent = originalText, 2000);
+      } catch (err) {
+        showError('Failed to copy to clipboard');
+      }
+    });
+
+    // Auto-format IBAN input
+    document.getElementById('iban').addEventListener('input', (e) => {
+      let value = e.target.value.replace(/\s/g, '').toUpperCase();
+      let formatted = value.match(/.{1,4}/g)?.join(' ') ?? value;
+      if (formatted !== e.target.value) {
+        e.target.value = formatted;
+      }
+      updateURL();
+    });
+
+    // Auto-format BIC input
+    document.getElementById('bic').addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+      updateURL();
+    });
+
+    // Update URL on other field changes
+    document.getElementById('name').addEventListener('input', updateURL);
+    document.getElementById('amount').addEventListener('input', updateURL);
+    document.getElementById('reference').addEventListener('input', updateURL);
+
+    // Load from URL on page load
+    loadFromURL();
+  </script>
+</body>
+</html>
+
